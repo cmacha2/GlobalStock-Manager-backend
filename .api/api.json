@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "clover-platform",
+      "source": "@clover-platform/v3#kib111lwq85os6",
+      "integrity": "sha512-uMtE5oVRV7inlATzfklereoWfjGdnuFfFwf/YUYYDYs2NyHY29tZc1seTIRB+JZAq1br3TTgDKtWy32OqI2kww==",
+      "installerVersion": "6.1.1"
+    }
+  ]
+}
