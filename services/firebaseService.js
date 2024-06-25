@@ -1,5 +1,9 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('./credentials.json'); // Path to the service account JSON file
+if (!process.env.FIREBASE_CREDENTIALS_PATH) {
+  throw new Error('FIREBASE_CREDENTIALS_PATH is not set.');
+}
+console.log('Using credentials from:', process.env.FIREBASE_CREDENTIALS_PATH);
+const serviceAccount = require(process.env.FIREBASE_CREDENTIALS_PATH);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
