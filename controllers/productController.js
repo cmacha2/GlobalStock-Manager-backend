@@ -65,25 +65,10 @@ const createProductHandler = async (req, res) => {
 
 const getItemsHandler = async (req, res) => {
   const { userId } = req.params;
+  const { limit = 100, offset = 0 } = req.query; // Obtener limit y offset de los parámetros de la query
   try {
-    const itemsResponse = await getItems(userId);
-    // const stockResponse = await getItemStocks(userId);
-
-    const items = itemsResponse.data.elements;
-    // const stocks = stockResponse.data.elements;
-    
-
-    // const itemsWithStock = items.map(item => {
-    //   const stock = stocks.find(stock => stock.item.id === item.id);
-    //   return {
-    //     ...item,
-    //     stockCount: stock ? stock.stockCount : 0,
-    //     quantity: stock ? stock.quantity : 0,
-    //     modifiedTime: stock ? stock.modifiedTime : item.modifiedTime
-    //   };
-    // });
-
-    res.status(200).json({ elements: items });
+    const response = await getItems(userId, parseInt(limit), parseInt(offset));
+    res.status(200).json(response);
   } catch (err) {
     console.error('Error in getItemsHandler:', err.message);
     res.status(500).json({ message: 'Error getting products', error: err.message });

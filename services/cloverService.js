@@ -1,13 +1,15 @@
+require('dotenv').config();
 const { getUserCredentials } = require('./firebaseService');
 const axios = require('axios');
 const FormData = require('form-data');
 
-/// Function to create a category if it doesn't exist
+
+
 // Function to create a category if it doesn't exist
 const createCategoryIfNotExists = async (categoryName, subcategoryName, token, mId) => {
   const fullCategoryName = `${subcategoryName} ${categoryName}`;
   try {
-    const url = `https://sandbox.dev.clover.com/v3/merchants/${mId}/categories`;
+    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/categories`;
     const categoriesResponse = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -52,7 +54,7 @@ const createProduct = async (newProduct, userId) => {
     const categoryId = await createCategoryIfNotExists(newProduct.category, newProduct.subcategory, token, mId);
 
     // Create the product
-    const productUrl = `https://sandbox.dev.clover.com/v3/merchants/${mId}/items`;
+    const productUrl = `${process.env.CLOVER_API_URL}/merchants/${mId}/items`;
     const productData = {
       ...newProduct,
       categories: [{ id: categoryId }]
@@ -68,7 +70,7 @@ const createProduct = async (newProduct, userId) => {
     const createdProduct = createdProductResponse.data;
 
     // Associate the product with the category using the correct API endpoint
-    const associationUrl = `https://sandbox.dev.clover.com/v3/merchants/${mId}/category_items`;
+    const associationUrl = `${process.env.CLOVER_API_URL}/merchants/${mId}/category_items`;
     const associationResponse = await axios.post(
       associationUrl,
       {
@@ -98,21 +100,38 @@ const createProduct = async (newProduct, userId) => {
 const updateProductStock = async (itemId, quantity, userId) => {
   try {
     const { token, mId } = await getUserCredentials(userId);
-    const sdk = require('../config/cloverConfig')(token);
-    return await sdk.inventoryUpdateItemStock({ quantity }, { mId, itemId });
+    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/items/${itemId}`;
+    const response = await axios.post(url, {
+      stockCount: quantity
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
   } catch (error) {
-    console.error("Error while updating product stock:", error.message);
+    console.error("Error while updating product stock:", error.response ? error.response.data : error.message);
     throw new Error("Error while updating product stock");
   }
 };
 
-const getItems = async (userId) => {
+const getItems = async (userId, limit = 100, offset = 0) => {
   try {
-    const { token, mId } = await getUserCredentials(userId);
-    const sdk = require('../config/cloverConfig')(token);
-    return await sdk.inventoryGetItems({expand: 'itemStock%2Ccategories', mId });
+    const { token, mId } = await getUserCredentials(userId); // Asegúrate de obtener token y mId correctamente
+    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/items?expand=categories,itemStock&limit=${limit}&offset=${offset}`;
+    console.log("URL", url)
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const total = response.data.total || 1000; // Asume un número suficientemente grande si no se proporciona
+    return { elements: response.data.elements, total };
   } catch (error) {
-    console.error("Error while getting items:", error.message);
+    console.error("Error while getting items:", error.response ? error.response.data : error.message);
     throw new Error("Error while getting items");
   }
 };
@@ -120,29 +139,41 @@ const getItems = async (userId) => {
 const getCategories = async (userId) => {
   try {
     const { token, mId } = await getUserCredentials(userId);
-    const sdk = require('../config/cloverConfig')(token);
-    return await sdk.categoryGetCategories({ mId });
+    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/categories`;
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data.elements;
   } catch (error) {
-    console.error("Error while getting categories:", error.message);
+    console.error("Error while getting categories:", error.response ? error.response.data : error.message);
     throw new Error("Error while getting categories");
   }
 };
 
-const getItemStocks = async (userId) => {
-  try {
-    const { token, mId } = await getUserCredentials(userId);
-    const sdk = require('../config/cloverConfig')(token);
-    return await sdk.inventoryGetItemStocks({ mId });
-  } catch (error) {
-    console.error("Error while getting item stocks:", error.message);
-    throw new Error("Error while getting item stocks");
-  }
-};
+// const getItemStocks = async (userId) => {
+//   try {
+//     const { token, mId } = await getUserCredentials(userId);
+//     const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/item_stocks`;
+//     const response = await axios.get(url, {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//         'Content-Type': 'application/json'
+//       }
+//     });
+//     return response.data.elements;
+//   } catch (error) {
+//     console.error("Error while getting item stocks:", error.response ? error.response.data : error.message);
+//     throw new Error("Error while getting item stocks");
+//   }
+// };
 
 const uploadImage = async (filePath, userId, itemId) => {
   try {
     const { token, mId } = await getUserCredentials(userId);
-    const url = `https://sandbox.dev.clover.com/oloplatform/v1/menuImage/merchants/${mId}/item/${itemId}`;
+    const url = `${process.env.CLOVER_OLO_URL}/menuImage/merchants/${mId}/item/${itemId}`;
     
     const form = new FormData();
     form.append('file', filePath);
@@ -164,7 +195,7 @@ const uploadImage = async (filePath, userId, itemId) => {
 const updateProductImage = async (itemId, imageId, userId) => {
   try {
     const { token, mId } = await getUserCredentials(userId);
-    const url = `https://sandbox.dev.clover.com/v3/merchants/${mId}/items/${itemId}`;
+    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/items/${itemId}`;
     
     const data = {
       imageId,
@@ -188,7 +219,6 @@ module.exports = {
   createProduct,
   updateProductStock,
   getItems,
-  getItemStocks,
   uploadImage,
   updateProductImage,
   getCategories
