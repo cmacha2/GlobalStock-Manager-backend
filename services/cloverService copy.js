@@ -69,21 +69,8 @@ const createProduct = async (newProduct, userId) => {
     });
 
     const createdProduct = createdProductResponse.data;
-    console.log('Product created:', createdProduct);
 
-    const itemId = createdProduct.id;
-    await updateCategory(categoryId, itemId, userId);
-    
-    return createdProduct;
-  } catch (error) {
-    console.error("Error while creating the product:", error.response ? error.response.data : error.message);
-    throw new Error("Error while creating the product");
-  }
-};
-
-const updateCategory = async (categoryId, itemId, userId) => {
-  try {
-    const { token, mId } = await getUserCredentials(userId);
+    // Associate the product with the category using the correct API endpoint
     const associationUrl = `${process.env.CLOVER_API_URL}/merchants/${mId}/category_items`;
     const associationResponse = await axios.post(
       associationUrl,
@@ -91,7 +78,7 @@ const updateCategory = async (categoryId, itemId, userId) => {
         elements: [
           {
             category: { id: categoryId },
-            item: { id: itemId}
+            item: { id: createdProduct.id }
           }
         ]
       },
@@ -102,19 +89,19 @@ const updateCategory = async (categoryId, itemId, userId) => {
         }
       }
     );
-    return associationResponse.data
+
+    console.log('Product created and associated with category', associationResponse.data);
+    return createdProduct;
   } catch (error) {
-    console.error("Error while updating category:", error.message);
-    throw new Error("Error while updating category");
+    console.error("Error while creating the product:", error.response ? error.response.data : error.message);
+    throw new Error("Error while creating the product");
   }
-
-}
-
+};
 
 const updateProductStock = async (itemId, quantity, userId) => {
   try {
     const { token, mId } = await getUserCredentials(userId);
-    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/item_stocks/${itemId}`;
+    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/items/${itemId}`;
     const response = await axios.post(url, {
       stockCount: quantity
     }, {
@@ -135,21 +122,24 @@ const getCategoryWithSubcategory = (category, subcategory) => {
 };
 
 const getItems = async (userId, limit = 100, offset = 0) => {
+ 
   try {
     const { token, mId } = await getUserCredentials(userId); // Asegúrate de obtener token y mId correctamente
-    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/items?expand=itemStock%2Ccategories%2CmenuItem&limit=${limit}&offset=${offset}`;
+    const url = `${process.env.CLOVER_API_URL}/merchants/${mId}/items?expand=itemStock%2Ccategories&limit=${limit}&offset=${offset}`;
     const response = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
-    // console.log("response", response.data.elements.map(item => item.menuItem));
-
+    console.log("response", response.data.elements[0]);
     const processedItems = (response.data.elements || []).map(item => ({
       ...item,
       key: item.id,
-      subcategory: item.categories && item.categories.elements[0] ? item.categories.elements[0].name : 'N/A',
+      categoryWithSubcategory: getCategoryWithSubcategory(
+        item.categories && item.categories[0] ? item.categories[0].name : 'N/A',
+        item.subcategory || 'N/A'
+      ),
       stockCount: item.itemStock ? item.itemStock.stockCount : 0,
     }));
 

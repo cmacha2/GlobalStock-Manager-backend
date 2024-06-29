@@ -37,17 +37,17 @@ const createProductHandler = async (req, res) => {
 
     const inventoryResponse = await updateProductStock(productId, stockCount, userId);
 
-    if (image) {
-      const imagePath = path.join(__dirname, '..', 'uploads', image.filename);
+    // if (image) {
+    //   const imagePath = path.join(__dirname, '..', 'uploads', image.filename);
 
-      // Verify if the file exists
-      if (!fs.existsSync(imagePath)) {
-        throw new Error(`File ${imagePath} does not exist`);
-      }
+    //   // Verify if the file exists
+    //   if (!fs.existsSync(imagePath)) {
+    //     throw new Error(`File ${imagePath} does not exist`);
+    //   }
 
-      const imageResponse = await uploadImage(imagePath, userId, productId);
-      await updateProductImage(productId, imageResponse.id, userId);
-    }
+    //   const imageResponse = await uploadImage(imagePath, userId, productId);
+    //   await updateProductImage(productId, imageResponse.id, userId);
+    // }
 
     // Increment the SKU counter after the product is created
     await incrementSkuCounter(userId, category);
@@ -65,7 +65,7 @@ const createProductHandler = async (req, res) => {
 
 const getItemsHandler = async (req, res) => {
   const { userId } = req.params;
-  const { limit = 100, offset = 0 } = req.query; // Obtener limit y offset de los parámetros de la query
+  const { limit, offset } = req.query;
   try {
     const response = await getItems(userId, parseInt(limit), parseInt(offset));
     res.status(200).json(response);
